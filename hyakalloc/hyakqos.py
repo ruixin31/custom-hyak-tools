@@ -2,6 +2,7 @@
 hyakqos contains the QosResourceQuery class, and the QosResource class
 """
 
+from collections import defaultdict
 import re
 import subprocess
 import pwd
@@ -235,26 +236,28 @@ class QosResourceQuery:
             self.ckpt_job_limit = job_limit
 
         sinfo_pattern = re.compile(
-            r"(\d*) *\d*\/(\d*)\/\d*\/\d*(?:\(\w*\)|) *(?:gpu:\w*:|)(\d|) *(?:gpu:\w*:|)(\d|)")
+            r"(\d*) *\d*\/(\d*)\/\d*\/\d*(?:\(\w*\)|) *(?:gpu:(\w*):|)(\d|) *(?:gpu:\w*:|)(\d|)")
 
         sinfo_flags = ["sinfo", "-hp", "ckpt", "-O", "Nodes,CPUsState,Gres,GresUsed"]
         sinfo_output = subprocess.run(sinfo_flags, capture_output=True,
             encoding='utf-8', check=False).stdout
 
         free_cpu = []
-        free_gpu = []
+        all_gpu = defaultdict(int)
+        free_gpu = defaultdict(int)
 
         for line in sinfo_output.split('\n'):
             has_resources = re.match(sinfo_pattern, line)
             if has_resources:
-                nodes_num, avail_cpu, total_gpu, used_gpu = has_resources.groups()
+                nodes_num, avail_cpu, gpu_type, total_gpu, used_gpu = has_resources.groups()
                 if total_gpu and used_gpu:
                     gpu_calc = (int(total_gpu) - int(used_gpu)) * int(nodes_num)
-                    free_gpu.append(gpu_calc)
+                    free_gpu[gpu_type] += gpu_calc
+                    all_gpu[gpu_type] += int(total_gpu) * int(nodes_num)
                 free_cpu.append(int(avail_cpu))
 
         self.ckpt_free_cpu = str(sum(free_cpu))
-        self.ckpt_free_gpu = str(sum(free_gpu))
+        self.ckpt_free_gpu = "\n".join([ f"{gpu}: {free_gpu[gpu]}/{all_gpu[gpu]}" for gpu in free_gpu ])
 
     def filter_by_partition(self, _query_partition: str):
         """
