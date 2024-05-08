@@ -214,7 +214,7 @@ class QosResourceQuery:
         self.__generate_qos_list()
         self.__generate_qos_resource_dict()
 
-    def run_ckpt_query(self):
+    def run_ckpt_query(self, task_gpu_count):
         """
         This method queries ckpt resources & job limit, then turns on the ckpt printing flag
         """
@@ -245,19 +245,28 @@ class QosResourceQuery:
         free_cpu = []
         all_gpu = defaultdict(int)
         free_gpu = defaultdict(int)
+        gpu_tasks = defaultdict(int)
 
         for line in sinfo_output.split('\n'):
             has_resources = re.match(sinfo_pattern, line)
             if has_resources:
                 nodes_num, avail_cpu, gpu_type, total_gpu, used_gpu = has_resources.groups()
+                # if int(avail_cpu) == 0:
+                #     continue
                 if total_gpu and used_gpu:
-                    gpu_calc = (int(total_gpu) - int(used_gpu)) * int(nodes_num)
-                    free_gpu[gpu_type] += gpu_calc
-                    all_gpu[gpu_type] += int(total_gpu) * int(nodes_num)
+                    total_gpu = int(total_gpu)
+                    used_gpu = int(used_gpu)
+                    nodes_num = int(nodes_num)
+                    avail_gpu = total_gpu - used_gpu
+                    free_gpu[gpu_type] += avail_gpu * nodes_num
+                    all_gpu[gpu_type] += total_gpu * nodes_num
+                    if task_gpu_count and avail_gpu >= task_gpu_count:
+                        gpu_tasks[gpu_type] += (avail_gpu // task_gpu_count) * nodes_num
+
                 free_cpu.append(int(avail_cpu))
 
         self.ckpt_free_cpu = str(sum(free_cpu))
-        self.ckpt_free_gpu = "\n".join([ f"{gpu}: {free_gpu[gpu]}/{all_gpu[gpu]}" for gpu in free_gpu ])
+        self.ckpt_free_gpu = "\n".join([ f"{gpu}: {f'({gpu_tasks[gpu]})' if task_gpu_count else ''} {free_gpu[gpu]}/{all_gpu[gpu]}" for gpu in free_gpu ])
 
     def filter_by_partition(self, _query_partition: str):
         """
