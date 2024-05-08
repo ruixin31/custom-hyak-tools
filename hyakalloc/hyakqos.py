@@ -12,6 +12,8 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+FAVORABLE_GPUS = ['a100', 'a40', 'l40']
+
 class QosResource:
     """
     The QosResource class performs an scontrol query for the QOS name given
@@ -113,7 +115,6 @@ class QosResourceQuery:
                     print("Error: Group '%s' not found." % self.query_search_term)
                     sys.exit(1)
 
-
     def __filter_by_cluster(self, sacctmgr_output):
         """
         The input here is a multiline string with lines that look like:
@@ -192,7 +193,7 @@ class QosResourceQuery:
                 and self.__filter_by_partition(qos_name) \
                 and self.__filter_by_group(qos_name):
                 filtered_qos_list.append(qos_name)
-        filtered_qos_list.sort()
+        filtered_qos_list.sort(key=lambda x: any([favorable_gpu in x for favorable_gpu in FAVORABLE_GPUS]))
         return filtered_qos_list
 
     def __generate_qos_list(self):
@@ -251,13 +252,13 @@ class QosResourceQuery:
             has_resources = re.match(sinfo_pattern, line)
             if has_resources:
                 nodes_num, avail_cpu, gpu_type, total_gpu, used_gpu = has_resources.groups()
-                # if int(avail_cpu) == 0:
-                #     continue
                 if total_gpu and used_gpu:
                     total_gpu = int(total_gpu)
                     used_gpu = int(used_gpu)
                     nodes_num = int(nodes_num)
                     avail_gpu = total_gpu - used_gpu
+                    if int(avail_cpu) == 0:
+                        avail_gpu = 0
                     free_gpu[gpu_type] += avail_gpu * nodes_num
                     all_gpu[gpu_type] += total_gpu * nodes_num
                     if task_gpu_count and avail_gpu >= task_gpu_count:
@@ -266,7 +267,13 @@ class QosResourceQuery:
                 free_cpu.append(int(avail_cpu))
 
         self.ckpt_free_cpu = str(sum(free_cpu))
-        self.ckpt_free_gpu = "\n".join([ f"{gpu}: {f'({gpu_tasks[gpu]})' if task_gpu_count else ''} {free_gpu[gpu]}/{all_gpu[gpu]}" for gpu in free_gpu ])
+        gpus = sorted(sorted(free_gpu.keys()), key=lambda x: x in FAVORABLE_GPUS)
+        self.ckpt_free_gpu = "\n".join(
+            [
+                f"{gpu}: {f'({gpu_tasks[gpu]}) ' if task_gpu_count else ''}{free_gpu[gpu]}/{all_gpu[gpu]}"
+                for gpu in gpus
+            ]
+        )
 
     def filter_by_partition(self, _query_partition: str):
         """
