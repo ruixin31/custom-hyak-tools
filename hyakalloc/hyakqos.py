@@ -86,8 +86,7 @@ class QosResourceQuery:
         self.debug = debugopt
 
     def __validate_query_search_term(self):
-        search_term_without_dashes_or_underscores = ''.join([c for c in self.query_search_term if c not in '-_'])
-        if not search_term_without_dashes_or_underscores.isalnum():
+        if not self.query_search_term.isalnum():
             if self.debug:
                 raise ValueError("Input should be alphanumeric, no spaces or special characters.")
             else:

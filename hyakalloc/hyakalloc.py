@@ -5,8 +5,8 @@ of QOSes and their current resource usage, and prints it to stdout in a table.
 
 import argparse
 import getpass
-from hyakalloc.hyakqos import QosResourceQuery
-from hyakalloc.hyakmxcheck import HyakMxCheck
+from hyakqos import QosResourceQuery
+from hyakmxcheck import HyakMxCheck
 
 def create_parser():
     """
