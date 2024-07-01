@@ -4,8 +4,8 @@ import re
 import sys
 import pathlib
 
-file_path = pathlib.Path(__file__).parent.resolve()
-sys.path.append(str(file_path))
+module_path = pathlib.Path(__file__).parent.resolve()
+sys.path.append(str(module_path))
 from hyakalloc.cli import main
 
 if __name__ == "__main__":
