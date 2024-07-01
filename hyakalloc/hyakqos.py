@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
-FAVORABLE_GPUS = ['a100', 'a40', 'l40']
+FAVORABLE_GPUS = ['a100', 'a40', 'l40', 'l40s']
 
 class QosResource:
     """
@@ -192,7 +192,7 @@ class QosResourceQuery:
                 and self.__filter_by_partition(qos_name) \
                 and self.__filter_by_group(qos_name):
                 filtered_qos_list.append(qos_name)
-        filtered_qos_list.sort(key=lambda x: any([favorable_gpu in x for favorable_gpu in FAVORABLE_GPUS]))
+        filtered_qos_list.sort(key=lambda x: x.split('-')[-1] in FAVORABLE_GPUS)
         return filtered_qos_list
 
     def __generate_qos_list(self):
@@ -228,7 +228,7 @@ class QosResourceQuery:
         # 3. the final column (total gpus) of gpu:2080ti:X
         # 4. the final column (used gpus) of gpu:2080ti:8(IDX:0-7
         sacctmgr_show_job_limit = [
-        "/usr/bin/sacctmgr", "show", "association", "where", "account=ckpt", "format=GrpJobs", "--noheader", "--parsable2"
+        "/usr/bin/sacctmgr", "show", "association", "where", "account=ckpt-all", "format=GrpJobs", "--noheader", "--parsable2"
         ]
         job_limit = subprocess.run(sacctmgr_show_job_limit, capture_output=True,
             encoding='utf-8', check=False).stdout.strip()
@@ -238,7 +238,7 @@ class QosResourceQuery:
         sinfo_pattern = re.compile(
             r"(\d*) *\d*\/(\d*)\/\d*\/\d*(?:\(\w*\)|) *(?:gpu:(\w*):|)(\d|) *(?:gpu:\w*:|)(\d|)")
 
-        sinfo_flags = ["sinfo", "-hp", "ckpt", "-O", "Nodes,CPUsState,Gres,GresUsed"]
+        sinfo_flags = ["sinfo", "-hp", "ckpt-all", "-O", "Nodes,CPUsState,Gres,GresUsed"]
         sinfo_output = subprocess.run(sinfo_flags, capture_output=True,
             encoding='utf-8', check=False).stdout
 
