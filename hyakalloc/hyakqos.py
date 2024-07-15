@@ -228,7 +228,7 @@ class QosResourceQuery:
         # 3. the final column (total gpus) of gpu:2080ti:X
         # 4. the final column (used gpus) of gpu:2080ti:8(IDX:0-7
         sacctmgr_show_job_limit = [
-        "/usr/bin/sacctmgr", "show", "association", "where", "account=ckpt-all", "format=GrpJobs", "--noheader", "--parsable2"
+        "/usr/bin/sacctmgr", "show", "association", "where", "account=ckpt", "format=GrpJobs", "--noheader", "--parsable2"
         ]
         job_limit = subprocess.run(sacctmgr_show_job_limit, capture_output=True,
             encoding='utf-8', check=False).stdout.strip()
