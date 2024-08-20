@@ -214,7 +214,7 @@ class QosResourceQuery:
         self.__generate_qos_list()
         self.__generate_qos_resource_dict()
 
-    def run_ckpt_query(self, task_gpu_count):
+    def run_ckpt_query(self, task_gpu_count, display_full_ckpt):
         """
         This method queries ckpt resources & job limit, then turns on the ckpt printing flag
         """
@@ -242,7 +242,7 @@ class QosResourceQuery:
         sinfo_output = subprocess.run(sinfo_flags, capture_output=True,
             encoding='utf-8', check=False).stdout
 
-        free_cpu = []
+        free_cpu = defaultdict(int)
         all_gpu = defaultdict(int)
         free_gpu = defaultdict(int)
         gpu_tasks = defaultdict(int)
@@ -263,16 +263,24 @@ class QosResourceQuery:
                     if task_gpu_count and avail_gpu >= task_gpu_count:
                         gpu_tasks[gpu_type] += (avail_gpu // task_gpu_count) * nodes_num
 
-                free_cpu.append(int(avail_cpu))
+                free_cpu[gpu_type] = int(avail_cpu)
 
-        self.ckpt_free_cpu = str(sum(free_cpu))
+        self.ckpt_free_cpu = str(sum(free_cpu.values()))
         gpus = sorted(sorted(free_gpu.keys()), key=lambda x: x in FAVORABLE_GPUS)
+
+        display_gpus = [gpu for gpu in gpus if gpu in FAVORABLE_GPUS or display_full_ckpt]
         self.ckpt_free_gpu = "\n".join(
             [
                 f"{gpu}: {f'({gpu_tasks[gpu]}) ' if task_gpu_count else ''}{free_gpu[gpu]}/{all_gpu[gpu]}"
-                for gpu in gpus
+                for gpu in gpus if gpu in display_gpus
             ]
         )
+
+        total_free_gpu = sum([c for gpu, c in free_gpu.items() if gpu in display_gpus])
+        total_all_gpu = sum([c for gpu, c in all_gpu.items() if gpu in display_gpus])
+        total_gpu_tasks = sum([c for gpu, c in gpu_tasks.items() if gpu in display_gpus])
+        self.ckpt_free_gpu += "\n" + \
+            f"all: {f'({total_gpu_tasks}) ' if task_gpu_count else ''}{total_free_gpu}/{total_all_gpu}"
 
     def filter_by_partition(self, _query_partition: str):
         """
