@@ -31,6 +31,9 @@ def create_parser():
     # Optional minimum number of GPUs per node in checkpoint
     parser.add_argument("-t","--task-gpu-count", default=0, type=int,
                         help="(Optional) Specify how many gpu per node you need in checkpoint. Default is 0.")
+    # Optionally display all checkpoint resources as opposed to just resources with favorable GPUs
+    parser.add_argument("-f","--full-ckpt", action='store_true',
+                        help="(Optional) Display ckpt-all resources, as opposed to default of only favorable GPUs.")
     # Hidden argument for choosing cluster name, defaults to 'klone'
     parser.add_argument("--cluster", default='klone', type=str,
                         help=argparse.SUPPRESS)
@@ -55,6 +58,7 @@ def main():
     query_partition = arguments.partition
     
     query_task_gpu_count = arguments.task_gpu_count
+    query_full_ckpt = arguments.full_ckpt
 
     query_clustername = arguments.cluster
     debug = arguments.debug
@@ -80,7 +84,7 @@ def main():
     my_query = QosResourceQuery(*query_inputs)
 
     if run_checkpoint_query:
-        my_query.run_ckpt_query(query_task_gpu_count)
+        my_query.run_ckpt_query(query_task_gpu_count, query_full_ckpt)
 
     if debug:
         my_query.debugging(True)
