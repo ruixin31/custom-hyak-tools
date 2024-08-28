@@ -7,5 +7,6 @@ This is a tool for showing what types of gpus are available on the ckpt partitio
 ```bash
 git clone git@github.com:ruixin31/custom-hyak-tools.git
 cd custom-hyak-tools
+mkdir -p ~/.local/bin
 ln -s $(realpath hyakalloc.py) ~/.local/bin/hyakalloc
 ```
