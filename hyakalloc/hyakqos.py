@@ -74,8 +74,10 @@ class QosResourceQuery:
         self.query_partition = ""
         self.partition_filter = False
         self.print_ckpt = False
+        self.print_ckpt_fairshare = False
         self.ckpt_free_cpu = ""
         self.ckpt_free_gpu = ""
+        self.ckpt_fairshare = ""
         self.ckpt_job_limit = ""
         self.debug = False
         if self.query_type == "user" or self.query_type == "group":
@@ -282,6 +284,15 @@ class QosResourceQuery:
         self.ckpt_free_gpu += "\n" + \
             f"all: {f'({total_gpu_tasks}) ' if task_gpu_count else ''}{total_free_gpu}/{total_all_gpu}"
 
+    def run_fairshare_query(self, query_user):
+        self.print_ckpt_fairshare = True
+        fairshare_command = f"sshare -u {query_user} | grep {query_user} | grep ckpt | sort -k7,7rn | awk '{{print $1\":\", $7}}' | sed 's/-ckpt//g'"
+        fairshare_result = subprocess.run(
+            fairshare_command, shell=True, capture_output=True, text=True
+        ).stdout.strip()
+
+        self.ckpt_fairshare += fairshare_result
+
     def filter_by_partition(self, _query_partition: str):
         """
         This method turns on partition filtering & sets the instance's
@@ -299,6 +310,8 @@ class QosResourceQuery:
             self.__print_resource_table()
         if self.print_ckpt:
             self.__print_ckpt_table()
+        if self.print_ckpt_fairshare:
+            self.__print_ckpt_fairshare_table()
 
     def __print_ckpt_table(self):
         table_title = "Checkpoint Resources"
@@ -369,3 +382,18 @@ class QosResourceQuery:
                 raise LookupError("No data for %s" % ' '.join(err))
             else:
                 print("Error: No data for %s" % ' '.join(err))
+
+    def __print_ckpt_fairshare_table(self):
+        table_title = "Fairshare on Checkpoint Resources (higher is better)"
+        table = Table(title=table_title, box=box.ROUNDED)
+        table.add_column("Fairshare", justify="right")
+        table.add_row(self.ckpt_fairshare)
+        if table.rows:
+            console = Console()
+            console.print(table)
+        else:
+            if self.debug:
+                raise LookupError("No data for ckpt fairshare available.")
+            else:
+                print("Error: No data for ckpt fairshare available.")
+

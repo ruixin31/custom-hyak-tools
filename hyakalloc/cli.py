@@ -34,6 +34,9 @@ def create_parser():
     # Optionally display all checkpoint resources as opposed to just resources with favorable GPUs
     parser.add_argument("-f","--full-ckpt", action='store_true',
                         help="(Optional) Display ckpt-all resources, as opposed to default of only favorable GPUs.")
+    # Optionally display fairshare value associated with all checkpoint resources
+    parser.add_argument("-s","--fairshare", action='store_true',
+                        help="(Optional) Display fairshare value associated with all checkpoint resources.")
     # Hidden argument for choosing cluster name, defaults to 'klone'
     parser.add_argument("--cluster", default='klone', type=str,
                         help=argparse.SUPPRESS)
@@ -59,6 +62,7 @@ def main():
     
     query_task_gpu_count = arguments.task_gpu_count
     query_full_ckpt = arguments.full_ckpt
+    query_fairshare = arguments.fairshare
 
     query_clustername = arguments.cluster
     debug = arguments.debug
@@ -85,6 +89,11 @@ def main():
 
     if run_checkpoint_query:
         my_query.run_ckpt_query(query_task_gpu_count, query_full_ckpt)
+
+    if query_fairshare:
+        if not query_user:
+            query_user = getpass.getuser()
+        my_query.run_fairshare_query(query_user)
 
     if debug:
         my_query.debugging(True)
